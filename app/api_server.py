@@ -150,7 +150,7 @@ async def startup_event():
         # Initialize recommender with catalog
         recommender = SHLRecommender(catalog_path)
         
-        logger.info(f"[OK] Recommender initialized with {len(recommender.engine.assessments)} assessments")
+        logger.info(f"[OK] Recommender initialized with {len(recommender.catalog.assessments)} assessments")
         logger.info("[OK] API ready to accept requests")
         
     except Exception as e:
@@ -180,7 +180,7 @@ async def health_check():
     - service_ready: Whether service is ready
     """
     try:
-        if not recommender or not recommender.engine.assessments:
+        if not recommender or not recommender.catalog.assessments:
             return HealthResponse(
                 status="degraded",
                 timestamp=datetime.utcnow().isoformat(),
@@ -191,7 +191,7 @@ async def health_check():
         return HealthResponse(
             status="ok",
             timestamp=datetime.utcnow().isoformat(),
-            catalog_size=len(recommender.engine.assessments),
+            catalog_size=len(recommender.catalog.assessments),
             service_ready=True
         )
     
