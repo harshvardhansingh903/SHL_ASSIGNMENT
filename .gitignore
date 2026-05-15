@@ -1,0 +1,83 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+*.pem
+*.key
+credentials.json
+
+# Logs & Output
+logs/
+*.log
+evaluation_outputs/
+*.tmp
+
+# Debug & Temporary
+debug_*
+test_*
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node (if used)
+node_modules/
+package-lock.json
+yarn.lock
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Archived/Backup files
+*.bak
+*.backup
+*.old
+*.zip
+
+# Experimental/Development files
+experimental/
+scratch/
+temp/

@@ -1,0 +1,167 @@
+{
+  "summary": {
+    "total_traces": 10,
+    "avg_recall": 0.34439115646258506,
+    "avg_precision": 0.1217063492063492,
+    "total_hallucinations": 0,
+    "total_schema_violations": 0
+  },
+  "traces": [
+    {
+      "trace_name": "C1",
+      "total_turns": 4,
+      "successful_turns": 3,
+      "avg_confidence": 0.42499999999999993,
+      "recall_at_10": 0.5,
+      "precision": 0.1111111111111111,
+      "schema_violations": 0,
+      "hallucinations": 0,
+      "clarification_accuracy": 0.0,
+      "refinement_success_rate": 0.0,
+      "comparison_handled": false,
+      "errors": []
+    },
+    {
+      "trace_name": "C2",
+      "total_turns": 3,
+      "successful_turns": 3,
+      "avg_confidence": 0.26666666666666666,
+      "recall_at_10": 0.5555555555555555,
+      "precision": 0.13333333333333333,
+      "schema_violations": 0,
+      "hallucinations": 0,
+      "clarification_accuracy": 0.0,
+      "refinement_success_rate": 0.0,
+      "comparison_handled": false,
+      "errors": [
+        "Turn 2: end_of_conversation mismatch"
+      ]
+    },
+    {
+      "trace_name": "C3",
+      "total_turns": 5,
+      "successful_turns": 3,
+      "avg_confidence": 0.18,
+      "recall_at_10": 0.44000000000000006,
+      "precision": 0.06666666666666667,
+      "schema_violations": 0,
+      "hallucinations": 0,
+      "clarification_accuracy": 1.0,
+      "refinement_success_rate": 0.0,
+      "comparison_handled": false,
+      "errors": []
+    },
+    {
+      "trace_name": "C4",
+      "total_turns": 3,
+      "successful_turns": 3,
+      "avg_confidence": 0.5333333333333333,
+      "recall_at_10": 0.7111111111111111,
+      "precision": 0.4988095238095238,
+      "schema_violations": 0,
+      "hallucinations": 0,
+      "clarification_accuracy": 0.0,
+      "refinement_success_rate": 0.0,
+      "comparison_handled": false,
+      "errors": [
+        "Turn 3: end_of_conversation mismatch"
+      ]
+    },
+    {
+      "trace_name": "C5",
+      "total_turns": 3,
+      "successful_turns": 2,
+      "avg_confidence": 0.3,
+      "recall_at_10": 0.5,
+      "precision": 0.3,
+      "schema_violations": 0,
+      "hallucinations": 0,
+      "clarification_accuracy": 1.0,
+      "refinement_success_rate": 0.0,
+      "comparison_handled": false,
+      "errors": [
+        "Turn 3: end_of_conversation mismatch"
+      ]
+    },
+    {
+      "trace_name": "C6",
+      "total_turns": 3,
+      "successful_turns": 0,
+      "avg_confidence": 0.16666666666666666,
+      "recall_at_10": 0.0,
+      "precision": 0.0,
+      "schema_violations": 0,
+      "hallucinations": 0,
+      "clarification_accuracy": 1.0,
+      "refinement_success_rate": 0.0,
+      "comparison_handled": false,
+      "errors": [
+        "Turn 3: end_of_conversation mismatch"
+      ]
+    },
+    {
+      "trace_name": "C7",
+      "total_turns": 4,
+      "successful_turns": 1,
+      "avg_confidence": 0.27499999999999997,
+      "recall_at_10": 0.25,
+      "precision": 0.0,
+      "schema_violations": 0,
+      "hallucinations": 0,
+      "clarification_accuracy": 1.0,
+      "refinement_success_rate": 0.0,
+      "comparison_handled": false,
+      "errors": [
+        "Turn 4: end_of_conversation mismatch"
+      ]
+    },
+    {
+      "trace_name": "C8",
+      "total_turns": 3,
+      "successful_turns": 0,
+      "avg_confidence": 0.19999999999999998,
+      "recall_at_10": 0.0,
+      "precision": 0.0,
+      "schema_violations": 0,
+      "hallucinations": 0,
+      "clarification_accuracy": 1.0,
+      "refinement_success_rate": 0.0,
+      "comparison_handled": false,
+      "errors": [
+        "Turn 3: end_of_conversation mismatch"
+      ]
+    },
+    {
+      "trace_name": "C9",
+      "total_turns": 7,
+      "successful_turns": 4,
+      "avg_confidence": 0.39999999999999997,
+      "recall_at_10": 0.36224489795918363,
+      "precision": 0.05714285714285715,
+      "schema_violations": 0,
+      "hallucinations": 0,
+      "clarification_accuracy": 1.0,
+      "refinement_success_rate": 0.0,
+      "comparison_handled": false,
+      "errors": [
+        "Turn 7: end_of_conversation mismatch"
+      ]
+    },
+    {
+      "trace_name": "C10",
+      "total_turns": 2,
+      "successful_turns": 1,
+      "avg_confidence": 0.5,
+      "recall_at_10": 0.125,
+      "precision": 0.05,
+      "schema_violations": 0,
+      "hallucinations": 0,
+      "clarification_accuracy": 0.0,
+      "refinement_success_rate": 0.0,
+      "comparison_handled": false,
+      "errors": [
+        "Turn 2: end_of_conversation mismatch"
+      ]
+    }
+  ]
+}
