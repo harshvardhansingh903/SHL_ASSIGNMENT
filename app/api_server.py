@@ -127,10 +127,52 @@ app = FastAPI(
 # Global recommender instance - initialized on startup
 recommender: Optional[SHLRecommender] = None
 
-# Get catalog path relative to app directory
-import os
+# Production-safe catalog path resolution
 from pathlib import Path
-catalog_path = str(Path(__file__).parent.parent / 'data' / 'shl_product_catalog_clean.json')
+import os
+
+def resolve_catalog_path() -> str:
+    """
+    Resolve catalog path robustly for both development and production.
+    Uses multiple fallback strategies to handle different environments.
+    """
+    # Strategy 1: Path relative to this file (/app/app/api_server.py)
+    if __file__:
+        try:
+            path1 = Path(__file__).resolve().parent.parent / 'data' / 'shl_product_catalog_clean.json'
+            if path1.exists():
+                logger.info(f"Using catalog path (strategy 1): {path1}")
+                return str(path1)
+            logger.debug(f"Strategy 1 path not found: {path1}")
+        except Exception as e:
+            logger.debug(f"Strategy 1 failed: {e}")
+    
+    # Strategy 2: Path relative to working directory (/app/)
+    try:
+        path2 = Path.cwd() / 'data' / 'shl_product_catalog_clean.json'
+        if path2.exists():
+            logger.info(f"Using catalog path (strategy 2): {path2}")
+            return str(path2)
+        logger.debug(f"Strategy 2 path not found: {path2}")
+    except Exception as e:
+        logger.debug(f"Strategy 2 failed: {e}")
+    
+    # Strategy 3: Absolute path for Docker container
+    try:
+        path3 = Path('/app/data/shl_product_catalog_clean.json')
+        if path3.exists():
+            logger.info(f"Using catalog path (strategy 3): {path3}")
+            return str(path3)
+        logger.debug(f"Strategy 3 path not found: {path3}")
+    except Exception as e:
+        logger.debug(f"Strategy 3 failed: {e}")
+    
+    # Fallback: Return the most likely path (won't error until first use)
+    default_path = str(Path(__file__).resolve().parent.parent / 'data' / 'shl_product_catalog_clean.json')
+    logger.warning(f"Using default/fallback path: {default_path}")
+    return default_path
+
+catalog_path = resolve_catalog_path()
 startup_time = None
 
 
@@ -141,20 +183,33 @@ async def startup_event():
     
     try:
         logger.info("Starting SHL Recommender API...")
+        logger.info(f"Resolved catalog path: {catalog_path}")
+        logger.info(f"Catalog file exists: {os.path.exists(catalog_path)}")
+        logger.info(f"Working directory: {os.getcwd()}")
+        logger.info(f"__file__: {__file__}")
+        
         startup_time = datetime.utcnow()
         
-        # Verify catalog path exists
+        # Verify catalog path exists before loading
         if not os.path.exists(catalog_path):
-            logger.warning(f"Catalog path not found: {catalog_path}, attempting alternate paths...")
+            logger.error(f"[CRITICAL] Catalog file not found at: {catalog_path}")
+            raise FileNotFoundError(f"Catalog not found: {catalog_path}")
         
         # Initialize recommender with catalog
+        logger.info("Loading SHL catalog...")
         recommender = SHLRecommender(catalog_path)
+        
+        if not recommender or not recommender.catalog.assessments:
+            raise RuntimeError("Recommender loaded but catalog is empty")
         
         logger.info(f"[OK] Recommender initialized with {len(recommender.catalog.assessments)} assessments")
         logger.info("[OK] API ready to accept requests")
         
+    except FileNotFoundError as fe:
+        logger.error(f"[ERROR] File not found during startup: {fe}", exc_info=True)
+        raise
     except Exception as e:
-        logger.error(f"[ERROR] Startup error: {e}")
+        logger.error(f"[ERROR] Startup error: {e}", exc_info=True)
         raise
 
 
@@ -282,7 +337,7 @@ async def chat(request: ChatRequest):
         raise
     
     except Exception as e:
-        logger.error(f"[{request_id}] Error: {e}")
+        logger.error(f"[{request_id}] Chat processing error: {e}", exc_info=True)
         
         # Graceful fallback response
         return ChatResponse(

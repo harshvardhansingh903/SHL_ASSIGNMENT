@@ -68,9 +68,21 @@ class CatalogLoader:
     
     def load(self):
         """Load catalog from JSON."""
+        import os
         print(f"Loading catalog from {self.catalog_path}...")
-        with open(self.catalog_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        print(f"File exists: {os.path.exists(self.catalog_path)}")
+        print(f"File is absolute: {os.path.isabs(self.catalog_path)}")
+        print(f"CWD: {os.getcwd()}")
+        
+        try:
+            with open(self.catalog_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except FileNotFoundError as e:
+            print(f"[ERROR] Catalog file not found: {self.catalog_path}")
+            raise
+        except Exception as e:
+            print(f"[ERROR] Failed to load catalog: {e}")
+            raise
     
     
         
@@ -193,20 +205,11 @@ class RecommendationEngine:
         debug_info['retrieval_count'] = len(candidates)
         
         # Rerank with diversity
-        reranked = self.ranker.rerank(candidates, top_k=top_k)
+        reranked = self.ranker.rank(candidates, top_k=top_k)
         debug_info['ranking_applied'] = True
         
         # PHASE 3: Apply stack enhancement conservatively (light touch)
-        recommendations = [scored.assessment for scored in reranked]
-        stack_type = self.stack_generator.determine_stack_type(accumulated_constraints)
-        debug_info['stack_type'] = stack_type
-        
-        # Only apply stack reordering if we have strong confidence in the stack type
-        if accumulated_constraints.confidence >= 0.6:
-            recommendations = self.stack_generator.enhance_with_stack_logic(
-                recommendations, accumulated_constraints
-            )
-        
+        recommendations = [scored.get('assessment') or scored for scored in reranked]
         debug_info['final_count'] = len(recommendations)
         
         return recommendations, debug_info
@@ -220,44 +223,9 @@ class RecommendationEngine:
         This enables multi-turn understanding where earlier context is preserved.
         Applied conservatively to avoid diluting current message intent.
         """
-        if not conversation_history or len(conversation_history) <= 1:
-            return current_constraints
-        
-        import copy
-        accumulated = copy.deepcopy(current_constraints)
-        
-        # Only accumulate if current message is a refinement
-        current_message = conversation_history[-1] if conversation_history else ""
-        if not self.refinement_handler.is_refinement_query(current_message):
-            # Not a refinement - just apply semantic normalization
-            if accumulated.role:
-                normalized_role = self.role_clusterer.normalize_role(accumulated.role)
-                if normalized_role:
-                    accumulated.role = normalized_role
-            return accumulated
-        
-        # For refinements, merge in prior context
-        for message in conversation_history[:-1]:  # Exclude current message
-            earlier_constraints = self.constraint_extractor.extract(message)
-            
-            # Merge constraints intelligently for refinements only
-            if not accumulated.role and earlier_constraints.role:
-                accumulated.role = earlier_constraints.role
-            
-            if not accumulated.seniority and earlier_constraints.seniority:
-                accumulated.seniority = earlier_constraints.seniority
-            
-            # Preserve role/seniority from earlier in context
-            if earlier_constraints.role and not accumulated.role:
-                accumulated.role = earlier_constraints.role
-        
-        # Normalize role using semantic clustering
-        if accumulated.role:
-            normalized_role = self.role_clusterer.normalize_role(accumulated.role)
-            if normalized_role:
-                accumulated.role = normalized_role
-        
-        return accumulated
+        # Simplified: just return current constraints
+        # Multi-turn accumulation can be enhanced later
+        return current_constraints
 
 
 class AgentState:
@@ -333,6 +301,7 @@ class SHLRecommender:
                     'end_of_conversation': False
                 }
             
+            print(f"[DEBUG] Processing message: {user_message[:50]}")
             self.state.add_turn(user_message)
             self.debug_log = {}
             
@@ -343,97 +312,52 @@ class SHLRecommender:
                 'end_of_conversation': False
             }
             
-            # STEP 1: Safety checks
-            try:
-                if self.safety_checker.is_prompt_injection(user_message):
-                    response['reply'] = self.safety_checker.get_safety_response('prompt_injection')
-                    return self._validate_response(response)
-                
-                out_of_scope = self.safety_checker.is_out_of_scope(user_message)
-                if out_of_scope:
-                    response['reply'] = self.safety_checker.get_safety_response(out_of_scope)
-                    return self._validate_response(response)
-                
-                competing_tool = self.safety_checker.is_competing_tool_request(user_message)
-                if competing_tool:
-                    response['reply'] = self.safety_checker.get_safety_response('competing_tool')
-                    return self._validate_response(response)
-            except Exception as e:
-                if self.debug:
-                    print(f"Safety check error: {e}")
-                # Continue processing even if safety check fails
-            
-            # STEP 2: Comparison detection
-            try:
-                comparison = self.engine.comparison_handler.detect_comparison(user_message)
-                if comparison:
-                    return self._handle_comparison(comparison, response)
-            except Exception as e:
-                if self.debug:
-                    print(f"Comparison detection error: {e}")
-                # Continue processing if comparison detection fails
-            
-            # STEP 3A: Check if user is confirming previous recommendations
-            try:
-                if self.state.current_recommendations and self._user_confirmed_last_message(user_message):
-                    response['recommendations'] = [
-                        {
-                            'name': a.name,
-                            'url': a.url,
-                            'test_type': a.keys[0] if a.keys else 'Assessment'
-                        }
-                        for a in self.state.current_recommendations
-                    ]
-                    response['reply'] = self._generate_final_confirmation(self.state.current_recommendations)
-                    response['end_of_conversation'] = True
-                    return self._validate_response(response)
-            except Exception as e:
-                if self.debug:
-                    print(f"Confirmation check error: {e}")
-                # Continue processing if confirmation check fails
-            
             # STEP 3B: Extract constraints
             try:
-                constraints = self.engine.constraint_extractor.extract(
-                    user_message,
-                    conversation_history=self.state.conversation_history[:-1]
-                )
+                constraints = self.engine.constraint_extractor.extract(user_message)
+                print(f"[DEBUG] Constraints: role={constraints.role}, seniority={constraints.seniority}")
                 self.state.current_constraints = constraints
                 self.debug_log['extracted_constraints'] = asdict(constraints)
             except Exception as e:
-                if self.debug:
-                    print(f"Constraint extraction error: {e}")
+                import traceback
+                print(f"[DEBUG] Constraint extraction error: {e}")
+                traceback.print_exc()
                 # Use empty constraints if extraction fails
                 constraints = self.engine.constraint_extractor.extract("")
             
             # STEP 4: Check if constraints are sufficient
             try:
-                if constraints.is_empty() or constraints.confidence < 0.3:
+                print(f"[DEBUG] Checking constraint sufficiency...")
+                if constraints.is_empty():
+                    print(f"[DEBUG] Constraints are empty, asking for clarification")
                     response['reply'] = self._generate_clarification(constraints)
                     self.state.clarification_asked = True
                     return self._validate_response(response)
             except Exception as e:
-                if self.debug:
-                    print(f"Constraint sufficiency check error: {e}")
+                print(f"[DEBUG] Constraint sufficiency check error: {e}")
             
             # STEP 5: Generate recommendations with safeguards
             try:
+                print(f"[DEBUG] Calling engine.recommend...")
                 recommendations, debug_info = self.engine.recommend(
                     constraints=constraints,
                     conversation_history=self.state.conversation_history,
                     top_k=10
                 )
+                print(f"[DEBUG] Got {len(recommendations) if recommendations else 0} recommendations")
                 self.debug_log['retrieval'] = debug_info
                 
                 # Safeguard: Ensure we got results
                 if not recommendations:
+                    print(f"[DEBUG] No recommendations returned")
                     response['reply'] = "I couldn't find suitable SHL assessments matching your criteria. Could you refine your requirements?"
                     response['end_of_conversation'] = False
                     return self._validate_response(response)
             
             except Exception as e:
-                if self.debug:
-                    print(f"Recommendation generation error: {e}")
+                import traceback
+                print(f"[DEBUG] Recommendation generation error: {e}")
+                traceback.print_exc()
                 # Fallback to generic response
                 response['reply'] = "I encountered an issue generating recommendations. Please try again."
                 response['end_of_conversation'] = False
@@ -458,8 +382,9 @@ class SHLRecommender:
                     response['end_of_conversation'] = False
             
             except Exception as e:
-                if self.debug:
-                    print(f"Recommendation formatting error: {e}")
+                import traceback
+                print(f"[DEBUG] Recommendation formatting error: {e}")
+                traceback.print_exc()
                 response['reply'] = 'I encountered an issue formatting recommendations.'
                 response['end_of_conversation'] = False
             
@@ -501,7 +426,7 @@ class SHLRecommender:
             needed.append("role")
         if not constraints.seniority:
             needed.append("seniority")
-        if constraints.needs_cognitive is None and constraints.needs_personality is None:
+        if not constraints.assessment_types:
             needed.append("assessment types (cognitive, personality, behavioral)")
         
         if 'role' in needed and 'seniority' in needed:

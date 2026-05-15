@@ -19,6 +19,17 @@ class Constraints:
     comparison_target: Optional[str] = None
     specific_assessments: List[str] = field(default_factory=list)
     exclude_assessments: List[str] = field(default_factory=list)
+    
+    def is_empty(self) -> bool:
+        """Check if no meaningful constraints were extracted."""
+        return (
+            not self.role and 
+            not self.seniority and 
+            not self.assessment_types and
+            not self.job_family and
+            not self.comparison_target and
+            not self.specific_assessments
+        )
 
 
 class ConstraintExtractor:
